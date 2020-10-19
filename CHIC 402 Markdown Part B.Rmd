@@ -1,0 +1,118 @@
+---
+title: "CHIC 402 Part B"
+output: html_document
+---
+##CHIC402, Project, Part B
+## Load required packages:
+```{r}
+library(stringr)
+library(tidyverse)
+```
+
+Write a function that takes as input a genome and returns another input with a random letter changed. Print the result of applying the function to the genome g = rep('A', 21). [4 marks]
+##1. Function to generate random gene sequence
+```{r}
+FUNC_point_mutaion = function(Genome){
+  nucleotides = c("A", "C", "G", "T") ##create vector containing nucleotides
+  sample_position = sample(1:21, 1) ##sample a position 
+  Genome[sample_position] = sample(nucleotides) ##replace sampled genome position with a sampled nucleotide
+    return(Genome)
+}
+```
+
+##2. Make g vector containing 21 A. And apply point mutation function
+```{r}
+g = rep("A", 21) ## 
+new_g = FUNC_point_mutaion(g) 
+```
+
+
+##3. Print mutated genome sequence.
+```{r}
+print(new_g)
+```
+
+Write a function that takes as inputs two genomes and returns two genomes that represent their recombination at a random spot. The genomes returned should always be different from the ones that were input. Print the result of applying the function to the genomes g1 = rep('A', 21) and g1 = rep('G', 21). [4 marks]
+##4. Create 2 genomes containing either 21 A or 21 G
+```{r}
+g1 = rep("A", 21)
+g2 = rep("G", 21)
+```
+
+##5. Genome recombination function, returning only recombined genomes.
+```{r}
+FUNC_Recombination = function (genome1, genome2) {
+  
+  recombin_pos=sample(1:21, 1) ##randomly select the position for the recombination
+  
+  genome1Top=genome1[1:recombin_pos]  ##take the top part of genome1
+  genome1Bottom=genome1[(recombin_pos+1):21] ##take the bottom part of genome1
+  genome2Top=genome2[1:recombin_pos] ##take the top part of genome2
+  genome2Bottom=genome2[(recombin_pos+1):21] ##take the bottom part of genome2
+
+  recombined_genome1=c(genome1Top, genome2Bottom)  ##combine top of G1 and bottom G2
+  recombined_genome2= c(genome2Top, genome1Bottom) ##combine top of G2 and bottom G1
+  
+ return(if(identical(genome1, recombined_genome1)){
+    FUNC_Recombination(genome1, genome2)
+  }else
+      (print(list(recombined_genome1, recombined_genome2)))
+  )
+}
+```
+##6. Run genome recombination function on vectors g1 and g2
+```{r}
+FUNC_Recombination(g1, g2)
+```
+
+Write a function that takes as input a genome and counts the number of occurrences of the string c('C', 'A', 'T') in the genome. The function should return this count, which represents the fitness score for the genome. Print out the score for the genome g = c('A', 'C', 'A', 'T', rep('A', 14), 'C', 'A', 'T'). [6 marks]
+##6. Calculate Fitness Function
+```{r}
+FUNC_calc_fitness = function (genome) {
+  fitness_sequence = c("C", "A", "T")
+  fitness_events = sapply(1:(length(genome)-length(fitness_sequence)+1),
+                            function(CAT)isTRUE(all.equal(fitness_sequence, 
+                              genome[ CAT + 0:(length(fitness_sequence)-1) ] )))
+    return (fitness = length(fitness_events[fitness_events==TRUE]))
+}
+
+g = c("A", "C", "A", 'T', rep("A", 14), "C", "A", "T")
+
+FUNC_calc_fitness(g)
+```
+
+
+
+Starting from a random population with 100 genomes, write a loop where at each iteration we create 100 new genomes by recombination of randomly chosen genomes,apply 3 mutations to each of the new genomes, and then keep the 100 genomes with the highest fitness scores (Hint: use the sort() function). Every 10 iterations, print out the genome with the highest fitness score. The loop should stop after 250 iterations. [10 marks]
+##9. make intial 100 genomes 
+  ```{r}
+Genome_List = replicate(100, 
+                                  list(sample(c("A", "T", "G", "C"),
+                                              21, replace = TRUE)))
+```
+
+##10. 250 iteration genetic evolution simulation
+```{r, eval = FALSE}
+ for(i in 1:25){
+   
+      for(j in 1:10){
+        Recombined_Hundred[j] = replicate(50, FUNC_Recombination(sample(Genome_List[j], 1, replace = FALSE),
+                 sample(Genome_List[j], 1, replace = FALSE)))
+      
+      Mutated_Hundred[j] = replicate(3, FUNC_point_mutaion(Recombined_Hundred[j]))
+      
+      All_Genomes[j] = Hundred_Genomes[j] + Mutated_Hundred[j]
+      
+      Fitness_Scores[j] = FUNC_calc_fitness(All_Genomes[j])
+      
+      Rank_Fitness[j] = sort(Fitness_Scores[j], decreasing = FALSE)
+      
+      All_Genomes_Scored[j] = All_Genomes[j] + Rank_Fitness[j]
+      
+      Genome_List[j] = data[1:100,]}
+   
+print(Genome_List[j] = data[1:10,])
+    }
+```
+
+  

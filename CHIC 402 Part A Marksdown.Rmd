@@ -1,0 +1,404 @@
+---
+title: "CHIC402 Part A"
+output: html_document
+---
+
+##CHIC402 Project: Part A
+
+##DATA TIDYING AND VISUALISATION###
+
+##1. Load required packages
+```{}
+library(tidyverse)
+library(readr)
+```
+
+##2. Import datasets
+```{}
+Climate_Vulnerability_Data = read_csv("climate_vulnerability.csv")
+
+Millenium_Dev_Goals_Data = read_csv("WB_Millenium_Goals.csv")
+```
+
+##3. Display Climate_Vulnerability_Data
+Write code to create a table which only
+contains columns names Country, Climate_Vulnerability, Area and Income_Status.
+```{}
+Tidy_Climate_Data = Climate_Vulnerability_Data%>%
+  rename(Climate_Vulnerability = `Climate Vulnerability (CV)                [CDI Adj. for Income & Regulation]`)%>%
+  rename(Area = `Area    (sq. km.)`)%>%
+  rename(Income_Status = `Income Status`)%>%
+  select(Country, Climate_Vulnerability, Area, Income_Status)
+```
+
+```{}
+print(Tidy_Climate_Data)
+```
+
+##4. Display tidied Climate Vulnerability dataset
+Using functions from the tidyr package, or otherwise, transform the Millenium Goals dataset into a tidy dataset with one row for each country, indicator and year. The Year column, and the column with the indicator values should both contain numeric values (hint: the functions in the stringr package may be useful). Remove any rows that would contain an NA value.
+
+
+##5. Organise and Tidy Millenium Development Goals Dataset
+```{}
+Millenium_Dev_Goals_Data[Millenium_Dev_Goals_Data == ".."] = NA
+
+Tidy_MDG = Millenium_Dev_Goals_Data%>%
+  select(-"Series Code", -"Country Code")%>%
+  rename("2011" = `2011 [YR2011]`)%>%
+  rename("2012" = `2012 [YR2012]`)%>%
+  rename("2013" = `2013 [YR2013]`)%>%
+  rename("2014" = `2014 [YR2014]`)%>%
+  rename("2015" = `2015 [YR2015]`)%>%
+  gather(key = "Year", value = "Values", "2011":"2015")%>%
+  filter(!is.na(Values))%>%
+  mutate(Year = as.numeric(str_replace_all(Year, " ", "")))%>%
+  rename(Country = "Country Name")
+```
+
+##6. Display Tidy_MDG
+Print out the first ten rows of the table you create. [5 marks]
+```{}
+print(Tidy_MDG)
+```
+
+
+Now we want to join the two tables by country name. Try to match up as many countries as possible (note that this may require changing some country names in one of the tables). Also note that some countries are recorded as one country in one dataset and two or more countries in the other; to avoid issues you should not include these countries in the combined dataset. 
+##7. Join data tables
+```{}
+Climate_MDG= Tidy_Climate_Data%>%
+ inner_join(Tidy_MDG)
+```
+
+Print out the number of rows in your combined table. [5 marks]
+##8. Print number of rows
+```{}
+print(nrow(Climate_MDG))
+```
+
+Write code to select 5 random countries with climate vulnerability < 0.1. Plot their CO2 emissions per capita over the five-year period as a line plot. Repeat the same for 5 random countries with climate vulnerability > 20. [5 marks]
+##9. Make dataset containing only countries with Climate Vulnerability < 0.1
+```{}
+low_vulnerability = Climate_MDG%>%
+  filter(Climate_Vulnerability < 0.1)
+```
+##10. Create a vector containing names of low climate vulnerability countries
+```{}
+unique_low_countries = unique(low_vulnerability$Country)
+```
+
+##11. Sample 5 low climate vulnerability countries
+```{}
+sample_low_countries = sample(unique_low_countries, 5)
+```
+
+##13. make dataset containing values only from the low climate vulnerability countries
+```{}
+sample_low_vulnerability = low_vulnerability%>%
+  filter(Country %in% sample_low_countries)%>%
+  spread(key = `Series Name`, value = Values)%>%
+  filter(!is.na(`CO2 emissions (metric tons per capita)`))
+```
+
+##14. Plot Low Vulnerability Sample Countries
+```{}
+ggplot(sample_low_vulnerability, aes(x=Year, y=`CO2 emissions (metric tons per capita)`, group = Country)) +
+  geom_line(aes(colour = Country))
+````
+
+##15. Create dataset cotaining only high climate vulnerability countries
+```{}
+high_vulnerability = Climate_MDG%>%
+  filter(Climate_Vulnerability > 20)
+```
+
+##16. Create a vector containing names of high climate vulnerability countries
+```{}
+unique_high_countries = unique(high_vulnerability$Country)
+```
+
+##17. Sample 5 high climate vulnerability countries  
+```{}
+sample_high_countries = sample(unique_high_countries, 5)
+```
+
+
+##18. Create dataset containing only sampled high vulnerability countries
+```{}
+sample_high_vulnerability = high_vulnerability%>%
+  filter(Country %in% sample_high_countries)%>%
+  spread(key = `Series Name`, value = Values)%>%
+  filter(!is.na(`CO2 emissions (metric tons per capita)`))
+```
+
+##19. Plot line graph of sampled high vulnerability countries
+```{}
+ggplot(sample_high_vulnerability, aes(x=Year, y=`CO2 emissions (metric tons per capita)`, group = Country)) +
+  geom_line(aes(colour = Country))
+```
+
+Plot a histogram of the climate vulnerability (note, make sure each country is only counted once in the histogram). We notice that it’s very clustered near zero with some outliers. It might be a good idea to
+log the dataset, but one issue is that there are some negative values. Subtract the minimum value from the Climate_Vulnerability variable and add 1, so that all values are positive, then take the log and plot the new histogram. [5 marks]
+
+##20. Plot Histogram of climate vulnerability, by distinct country.
+```{}
+distinct_Climate_MDG = Climate_MDG%>%
+  distinct(Country, .keep_all = TRUE)
+
+ggplot(distinct_Climate_MDG, aes(x=Climate_Vulnerability)) + 
+  geom_histogram(binwidth=1)
+```
+
+##21. Histogram with log transformed Climate Vulnerability values
+```{}
+transformed_Climate_MDG = distinct_Climate_MDG%>%
+  mutate(log_climate_vulnerability = log((Climate_Vulnerability - min(Climate_Vulnerability)) + 1))
+
+ggplot(transformed_Climate_MDG, aes(x=log_climate_vulnerability)) + 
+  geom_histogram(binwidth=0.1)
+```
+
+Now create a scatterplot with the average C02 emissions per capita for each country over the 5-year period plotted against log climate vulnerability. Colour the points by income status. Repeat the same
+plot with the average GDP, Life expectancy, population, total C02 missions and fertility rate. Do you see any trends? [7 marks]
+
+#22. Spread Climate_MDG data
+```{}
+Spread_Climate_MDG = Climate_MDG%>%
+  spread(key = 'Series Name', value = Values)%>%
+  mutate(log_climate_vulnerability = log((Climate_Vulnerability - min(Climate_Vulnerability)) + 1))%>%
+  mutate(CO2_Per_Capita = as.numeric(`CO2 emissions (metric tons per capita)`))%>%
+  mutate(GDP = as.numeric(`GDP per person employed (constant 2011 PPP $)`))%>%
+  mutate(Life_Expectancy = as.numeric(`Life expectancy at birth, total (years)`))%>%
+  mutate(Total_Population = as.numeric(`Population, total`))%>%
+  mutate(Total_CO2 = as.numeric(`CO2 emissions (kt)`))%>%
+  mutate(Fertility_Rate = as.numeric(`Fertility rate, total (births per woman)`))%>%
+  mutate(Literacy_Rate = as.numeric(`Literacy rate, adult total (% of people ages 15 and above)`))%>%
+  mutate(Poverty = as.numeric(`Poverty headcount ratio at $1.90 a day (2011 PPP) (% of population)`))%>%
+  filter(!is.na(Poverty))%>%
+  filter(!is.na(CO2_Per_Capita))%>%
+  filter(!is.na(GDP))%>%
+  filter(!is.na(Life_Expectancy))%>%
+  filter(!is.na(Total_Population))%>%
+  filter(!is.na(Total_CO2))%>%
+  filter(!is.na(Fertility_Rate))%>%
+  filter(!is.na(Literacy_Rate))%>%
+  group_by(Country)%>%
+  mutate(CO2_Per_Capita = mean(CO2_Per_Capita))%>%
+  mutate(GDP = mean(GDP))%>%
+  mutate(Life_Expectancy = mean(Life_Expectancy))%>%
+  mutate(Total_Population = mean(Total_Population))%>%
+  mutate(Total_CO2 = mean(Total_CO2))%>%
+  mutate(Fertility_Rate = mean(Fertility_Rate))%>%
+  mutate(Literacy_Rate = mean(Literacy_Rate))%>%
+  mutate(Poverty = mean(Poverty))%>%
+  distinct(Country, .keep_all = TRUE)
+```{}
+
+
+
+##23. CO2 per capita versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x= CO2_Per_Capita, y=log_climate_vulnerability)) +
+  geom_point(aes(colour = Income_Status))
+```
+
+##24. GDP versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x=GDP, y=log_climate_vulnerability)) +
+  geom_point(aes(colour = Income_Status))
+```
+
+##25. Life expectancy versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Life_Expectancy, y=log_climate_vulnerability)) +
+geom_point(aes(colour = Income_Status))
+```
+
+##26. Population versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Total_Population, y=log_climate_vulnerability)) +
+  geom_point(aes(colour = Income_Status))
+```
+
+
+##27. Total CO2 emissions versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Total_CO2, y=log_climate_vulnerability))+ 
+geom_point(aes(colour = Income_Status))
+```
+
+##28. Fertility rate versus log climate vulnerability
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Fertility_Rate, y=log_climate_vulnerability)) +
+  geom_point(aes(colour = Income_Status))
+```
+###CLUSTERING###
+Create a table which has one column for each MDG indicator, containing the mean value over the 5 years. Filter out any rows that have NA values. Make a scatterplot of the mean fertility rate against mean life expectancy at birth and colour the points by income status. [5 marks]
+##29. Mean Fertility Rate versus Mean life expectancy
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Fertility_Rate, y=Life_Expectancy)) +
+  geom_point(aes(colour = Income_Status))
+```
+
+
+##30. Create country_mdg_data Matrix
+```{}
+Fertility_Rate = Spread_Climate_MDG$Fertility_Rate  
+Life_Expectancy = Spread_Climate_MDG$Life_Expectancy
+
+country_mdg_data = cbind(Fertility_Rate, Life_Expectancy)
+```
+
+Create a table which has one column for each MDG indicator, containing the mean value over the 5 years. Filter out any rows that have NA values. Make a scatterplot of the mean fertility rate against mean life expectancy at birth and colour the points by income status. [5 marks]
+##31. Cluster the country_mdg_data Matrix
+```{}
+clustering = kmeans(country_mdg_data, 2)
+```
+
+##32. Add cluster to main dataset
+```{}
+Spread_Climate_MDG["cluster"]  = clustering[["cluster"]]
+```
+
+##33. Plot of fertility rate(x), versus life expectancy(y)
+```{}
+ggplot(Spread_Climate_MDG, aes(x=Fertility_Rate, y=Life_Expectancy)) +
+  geom_point(aes(colour = cluster))
+```
+
+First, create a matrix country_mdg_data with only two columns, containing the mean fertility rate and mean life expectancy for each country. Then do the k-means clustering using the command clustering = kmeans(country_mdg_data, 2) to cluster the data into two groups. The kmeans function returns
+a list with an element cluster which indicates which cluster each point belongs to. Plot the same scatterplot of the data as above, but this time the colours correspond to the clusters found by kmeans().
+[5 marks]
+Now let’s try to implement
+##34. Kmeans Algorithm and Function
+First, write code that samples two random rows of the country_mdg_data. These will be our cluster
+centres c1 and c2. Print out the fertility rate and life expectancy at these two rows. [2 marks]
+```{}
+sc1 = country_mdg_data[sample(nrow(country_mdg_data), 1,1), ]
+
+sc2 = country_mdg_data[sample(nrow(country_mdg_data), 1,1), ]
+
+print(sc1)
+print(sc2)
+cluster = c()
+```
+
+Now we need to calculate for each row (country) in the matrix, which of the two cluster centres is closer. Write a function that takes as input the data matrix and initial clusters and returns a vector cluster
+of the same length as the number of rows in the matrix, with cluster[i] = 1 if the data point in row i is closer to the first cluster centre and cluster[i] = 2 otherwise. Note that the Euclidean distance between two vectors x and y can be calculated as sqrt(sum((x-y)ˆ2)). Print out the classification of the matrix matrix(c(0,0),1,2) [5 marks]
+```{}
+FUNC_Kmeans = function(dataset, sc1, sc2) {
+  for(i in 1:nrow(dataset)){
+    
+    Distance1 = sqrt(sum((sc1 - dataset[i,])^2))
+    Distance2 = sqrt(sum((sc2 - dataset[i,])^2))
+    
+    if(Distance1 < Distance2){
+      cluster[i] = 1} else{
+        cluster[i] = 2
+      }
+    }
+    return(cluster)
+}
+
+
+New_Cluster = FUNC_Kmeans(country_mdg_data, sc1, sc2)
+
+print(New_Cluster)
+
+Spread_Climate_MDG["New_Cluster"] = New_Cluster
+
+print(Spread_Climate_MDG)
+```
+
+The next step is to calculate the new centre. This is done by taking the mean of the points in each cluster, for each of the variables, i.e. in this case fertility and life expectancy. Write a function that takes as inputs the vector cluster of cluster assignments and the data, and returns the new cluster centres. [5 marks]
+##35. Calculate New Centre
+```{}
+centre_x = c()
+centre_y = c()
+
+
+FUNC_New_Cluster = function(dataset){
+    dataset %>%
+    group_by(New_Cluster) %>%
+    summarise(centre_x = mean(Fertility_Rate), centre_y = mean(Life_Expectancy))
+ }
+
+print(FUNC_New_Cluster(Spread_Climate_MDG))
+
+```
+
+Now write a loop that clusters the dataset by alternately updating the cluster assignments and the cluster centres until the cluster centres change by less than 0.01 for each iteration. Plot the scatterplot
+of fertility rate against life expectancy, coloured by cluster. [5 marks]
+##36. alternately updating the cluster assignments
+```{}
+while(Distance[i] < 0.01){ 
+  for (i in 1:nrow(country_mgd_data)) { point1= country_mgd_data[sample (nrow(country_mgd_data), 1,1)] #sample first point point2= country_mgd_data[sample (nrow(country_mgd_data), 1,1)] #sample second point
+update_cluster = FUNC_Kmeans(country_mdg_data, point1, point2) #Peform Kmeans function
+
+Spread_Climate_MDG["update_cluster"] = update_cluster
+
+update_centre_x = c()
+update_centre_y = c()
+
+FUNC_Update_Cluster = function(dataset){
+  dataset %>%
+    group_by(update_cluster) %>%
+    summarise(update_centre_x = mean(Fertility_Rate), update_centre_y = mean(Life_Expectancy))
+}
+}
+  Distance[i] = sqrt(sum((update_centre_x - update_centre_y)^2)) 
+}  
+  
+```
+
+Now cluster the data again, but this time use seven variables corresponding to fertility rate, life expectancy, literacy, poverty, CO2 per capita, GDP and log climate vulnerability. Use the scale
+function to make sure all columns in your data matrix have mean zero and standard deviation 1. Plot the scatterplot of fertility rate against life expectancy, coloured by cluster. [5 marks]
+##37. Cluster by seven millendium development goal variables, first make table
+```{}
+vec_fertility_rate = Spread_Climate_MDG$Fertility_Rate 
+vec_life_epectancy = Spread_Climate_MDG$Life_Expectancy
+vec_literacy_rate = Spread_Climate_MDG$Literacy_Rate 
+vec_poverty = Spread_Climate_MDG$Poverty
+vec_co2_per_capita = Spread_Climate_MDG$CO2_Per_Capita 
+vec_gdp = Spread_Climate_MDG$GDP
+vec_log_climate_vuln = Spread_Climate_MDG$log_climate_vulnerability
+  
+seven_variable_data = cbind(vec_fertility_rate,
+                            vec_life_epectancy,
+                            vec_literacy_rate,
+                            vec_poverty,
+                            vec_co2_per_capita,
+                            vec_gdp,
+                            vec_log_climate_vuln)
+
+```
+
+##38. Cluster data by the seven millenium development goals
+```{}
+Seven_Variable_Cluster = kmeans(Seven_MDG_Data, 2)
+```
+
+##39. Add column to seven_variable_cluster dataset
+```{}
+seven_variable_data["Cluster"] = Seven_Variable_Cluster
+```
+##40. Plot fertility rate against life expectancy clustered by the 7MDGs
+```{}
+ggplot(seven_variable_data, aes(vec_fertility_rate, y=vec_life_epectancy))+
+  geom_point(aes(colour=Seven_Variable_Cluster))
+```
+
+Change your code to allow for an arbitrary number of clusters k. Run the code using all seven variables above, and k=5. Use the table() function with the income status and the cluster assignments to show whether they agree or disagree. [10 marks]
+##41 Create kmeans cluster function, for variable number of clusters
+```{}
+FUNC_Cluster_K = function(DATASET, K){
+  kmeans(DATASET, K)
+}
+```
+
+##42. Make seven clusters
+```{}
+Seven_Clusters = FUNC_Cluster_K(seven_variable_data, 7)
+```
+
+
